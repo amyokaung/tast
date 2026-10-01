@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Gradle CLI (Fallback)
+      - name: Install Gradle CLI
         run: sudo apt-get update && sudo apt-get install -y gradle
 
       - name: Install Android NDK & CMake via SDKManager
@@ -38,7 +38,6 @@ jobs:
             "platforms;android-34" \
             "build-tools;34.0.0"
           
-          # NDK Path သတ်မှတ်ခြင်း
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
 
       - name: Install Node Dependencies
@@ -48,16 +47,20 @@ jobs:
         working-directory: android
         run: |
           if [ ! -f "gradlew" ]; then
-            echo "gradlew not found, generating wrapper..."
             gradle wrapper
           fi
           chmod +x gradlew
+
+      - name: Build JS Bundle
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/ || true
 
       - name: Build Android Release APK
         working-directory: android
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-        run: ./gradlew assembleRelease --stacktrace
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
