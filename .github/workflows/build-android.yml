@@ -40,13 +40,22 @@ jobs:
       - name: Install Node Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Upgrade Gradle Wrapper to 8.3
-        working-directory: android
+      - name: Ensure Android Project Setup
         run: |
-          curl -sL https://services.gradle.org/distributions/gradle-8.3-bin.zip -o gradle-8.3-bin.zip
-          unzip -q gradle-8.3-bin.zip
-          ./gradle-8.3/bin/gradle wrapper --gradle-version 8.3
-          chmod +x gradlew
+          if [ ! -d "android" ]; then
+            echo "Android directory missing, initializing react-native android folder..."
+            npx react-native config || true
+          fi
+
+      - name: Upgrade Gradle Wrapper
+        run: |
+          if [ -d "android" ]; then
+            cd android
+            curl -sL https://services.gradle.org/distributions/gradle-8.3-bin.zip -o gradle-8.3-bin.zip
+            unzip -q gradle-8.3-bin.zip
+            ./gradle-8.3/bin/gradle wrapper --gradle-version 8.3
+            chmod +x gradlew
+          fi
 
       - name: Build JS Bundle
         run: |
