@@ -15,11 +15,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Java JDK (Java 11 - Compatiblity Version)
+      - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '17'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -40,14 +40,13 @@ jobs:
       - name: Install Node Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Ensure Gradlew Exists & Upgrade Wrapper if Needed
+      - name: Upgrade Gradle Wrapper to 8.3
         working-directory: android
         run: |
-          if [ ! -f "gradlew" ]; then
-            echo "gradlew not found, skipping..."
-          else
-            chmod +x gradlew
-          fi
+          curl -sL https://services.gradle.org/distributions/gradle-8.3-bin.zip -o gradle-8.3-bin.zip
+          unzip -q gradle-8.3-bin.zip
+          ./gradle-8.3/bin/gradle wrapper --gradle-version 8.3
+          chmod +x gradlew
 
       - name: Build JS Bundle
         run: |
@@ -59,3 +58,9 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
         run: ./gradlew assembleRelease --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Khittara-AI-Release-APK
+          path: android/app/build/outputs/apk/release/
