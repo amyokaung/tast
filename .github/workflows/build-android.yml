@@ -26,6 +26,9 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install Gradle CLI (Fallback)
+        run: sudo apt-get update && sudo apt-get install -y gradle
+
       - name: Install Android NDK & CMake via SDKManager
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
@@ -41,15 +44,14 @@ jobs:
       - name: Install Node Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Make Gradlew Executable
+      - name: Ensure Gradlew Exists
+        working-directory: android
         run: |
-          if [ -f "android/gradlew" ]; then
-            chmod +x android/gradlew
-          elif [ -f "gradlew" ]; then
-            chmod +x gradlew
-          else
-            echo "gradlew file not found, skipping chmod"
+          if [ ! -f "gradlew" ]; then
+            echo "gradlew not found, generating wrapper..."
+            gradle wrapper
           fi
+          chmod +x gradlew
 
       - name: Build Android Release APK
         working-directory: android
