@@ -25,7 +25,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install Android NDK & CMake via SDKManager
         run: |
@@ -36,7 +35,7 @@ jobs:
             "platforms;android-34" \
             "build-tools;34.0.0"
           
-          # NDK & CMake Path သတ်မှတ်ခြင်း
+          # NDK Path သတ်မှတ်ခြင်း
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
 
       - name: Install Node Dependencies
