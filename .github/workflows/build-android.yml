@@ -38,15 +38,14 @@ jobs:
           mkdir -p android/app/src/main/java/com/khittara/offlinemai
           mkdir -p android/app/src/main/res/values
 
-          # 1. Generate settings.gradle if missing
-          if [ ! -f "android/settings.gradle" ]; then
-            echo "rootProject.name = 'KhittaraAI'" > android/settings.gradle
-            echo "include ':app'" >> android/settings.gradle
-          fi
+          # 1. Generate settings.gradle
+          cat << 'EOF' > android/settings.gradle
+          rootProject.name = 'KhittaraAI'
+          include ':app'
+          EOF
 
-          # 2. Generate android/build.gradle if missing
-          if [ ! -f "android/build.gradle" ]; then
-            cat << 'EOF' > android/build.gradle
+          # 2. Generate android/build.gradle with React Native Plugin Path
+          cat << 'EOF' > android/build.gradle
           buildscript {
               repositories {
                   google()
@@ -55,21 +54,23 @@ jobs:
               dependencies {
                   classpath("com.android.tools.build:gradle:8.1.1")
                   classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10")
+                  classpath("com.facebook.react:react-native-gradle-plugin")
               }
           }
           allprojects {
               repositories {
                   google()
                   mavenCentral()
+                  maven { url("$rootDir/../node_modules/react-native/android") }
+                  maven { url("$rootDir/../node_modules/jsc-android/dist") }
               }
           }
           EOF
-          fi
 
-          # 3. Generate android/app/build.gradle if missing
-          if [ ! -f "android/app/build.gradle" ]; then
-            cat << 'EOF' > android/app/build.gradle
+          # 3. Generate android/app/build.gradle
+          cat << 'EOF' > android/app/build.gradle
           apply plugin: 'com.android.application'
+          apply plugin: 'com.facebook.react'
 
           android {
               compileSdkVersion 34
@@ -99,12 +100,10 @@ jobs:
               }
           }
           EOF
-          fi
 
-          # 4. Generate AndroidManifest.xml if missing
-          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
-            cat << 'EOF' > android/app/src/main/AndroidManifest.xml
-          <manifest xmlns:android="http://schemas.android.com/apk/res/auto">
+          # 4. Generate AndroidManifest.xml
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
               <uses-permission android:name="android.permission.READ_MEDIA_DOCUMENTS" />
@@ -123,7 +122,6 @@ jobs:
               </application>
           </manifest>
           EOF
-          fi
 
       - name: Generate Gradle Wrapper
         working-directory: android
