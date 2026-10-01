@@ -40,22 +40,105 @@ jobs:
       - name: Install Node Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Ensure Android Project Setup
+      - name: Auto-Generate Missing Android Project & Gradle Files
         run: |
-          if [ ! -d "android" ]; then
-            echo "Android directory missing, initializing react-native android folder..."
-            npx react-native config || true
+          mkdir -p android/app/src/main/java/com/khittara/offlinemai
+          mkdir -p android/app/src/main/res/values
+
+          # 1. Generate settings.gradle if missing
+          if [ ! -f "android/settings.gradle" ]; then
+            echo "rootProject.name = 'KhittaraAI'" > android/settings.gradle
+            echo "include ':app'" >> android/settings.gradle
           fi
 
-      - name: Upgrade Gradle Wrapper
-        run: |
-          if [ -d "android" ]; then
-            cd android
-            curl -sL https://services.gradle.org/distributions/gradle-8.3-bin.zip -o gradle-8.3-bin.zip
-            unzip -q gradle-8.3-bin.zip
-            ./gradle-8.3/bin/gradle wrapper --gradle-version 8.3
-            chmod +x gradlew
+          # 2. Generate android/build.gradle if missing
+          if [ ! -f "android/build.gradle" ]; then
+            cat << 'EOF' > android/build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath("com.android.tools.build:gradle:8.1.1")
+                  classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10")
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
           fi
+
+          # 3. Generate android/app/build.gradle if missing
+          if [ ! -f "android/app/build.gradle" ]; then
+            cat << 'EOF' > android/app/build.gradle
+          apply plugin: 'com.android.application'
+
+          android {
+              compileSdkVersion 34
+              namespace "com.khittara.offlinemai"
+
+              defaultConfig {
+                  applicationId "com.khittara.offlinemai"
+                  minSdkVersion 26
+                  targetSdkVersion 34
+                  versionCode 1
+                  versionName "1.0.0"
+
+                  externalNativeBuild {
+                      cmake {
+                          cppFlags "-O3 -std=c++17 -frtti -fexceptions"
+                          arguments "-DANDROID_STL=c++_shared"
+                          abiFilters "arm64-v8a", "x86_64"
+                      }
+                  }
+              }
+
+              externalNativeBuild {
+                  cmake {
+                      path file("../../cpp/CMakeLists.txt")
+                      version "3.22.1"
+                  }
+              }
+          }
+          EOF
+          fi
+
+          # 4. Generate AndroidManifest.xml if missing
+          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
+            cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/auto">
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+              <uses-permission android:name="android.permission.READ_MEDIA_DOCUMENTS" />
+              <application
+                  android:label="Khittara AI"
+                  android:allowBackup="true"
+                  android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+          fi
+
+      - name: Generate Gradle Wrapper
+        working-directory: android
+        run: |
+          curl -sL https://services.gradle.org/distributions/gradle-8.3-bin.zip -o gradle-8.3-bin.zip
+          unzip -q gradle-8.3-bin.zip
+          ./gradle-8.3/bin/gradle wrapper --gradle-version 8.3
+          chmod +x gradlew
 
       - name: Build JS Bundle
         run: |
