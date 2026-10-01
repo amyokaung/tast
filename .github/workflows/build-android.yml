@@ -15,19 +15,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Java JDK
+      - name: Setup Java JDK (Java 11 - Compatiblity Version)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '11'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install Gradle CLI
-        run: sudo apt-get update && sudo apt-get install -y gradle
 
       - name: Install Android NDK & CMake via SDKManager
         run: |
@@ -43,13 +40,14 @@ jobs:
       - name: Install Node Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Ensure Gradlew Exists
+      - name: Ensure Gradlew Exists & Upgrade Wrapper if Needed
         working-directory: android
         run: |
           if [ ! -f "gradlew" ]; then
-            gradle wrapper
+            echo "gradlew not found, skipping..."
+          else
+            chmod +x gradlew
           fi
-          chmod +x gradlew
 
       - name: Build JS Bundle
         run: |
@@ -60,10 +58,4 @@ jobs:
         working-directory: android
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-        run: ./gradlew assembleRelease --no-daemon
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Khittara-AI-Release-APK
-          path: android/app/build/outputs/apk/release/
+        run: ./gradlew assembleRelease --stacktrace
