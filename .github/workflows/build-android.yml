@@ -26,16 +26,9 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Android NDK & CMake via SDKManager
+      - name: Setup Android NDK Environment
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install \
-            "ndk;26.1.10909125" \
-            "cmake;3.22.1" \
-            "platforms;android-34" \
-            "build-tools;34.0.0"
-          
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle" >> $GITHUB_ENV
 
       - name: Install Node Dependencies
         run: npm install --legacy-peer-deps
