@@ -1,6 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.khittara.offlineai">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Permissions for local GGUF storage reading on SD card and phone storage -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -13,22 +12,25 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-      android:name=".MainApplication"
-      android:label="Khittara AI (ခေတ္တရာ)"
-      android:icon="@mipmap/ic_launcher"
-      android:requestLegacyExternalStorage="true"
-      android:largeHeap="true"
-      android:hardwareAccelerated="true">
+        android:name=".MainApplication"
+        android:label="Khittara AI (ခေတ္တရာ)"
+        android:icon="@mipmap/ic_launcher"
+        android:requestLegacyExternalStorage="true"
+        android:largeHeap="true"
+        android:hardwareAccelerated="true">
 
-      <activity
-        android:name=".MainActivity"
-        android:label="Khittara AI"
-        android:windowSoftInputMode="adjustResize"
-        android:exported="true">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-      </activity>
+        <activity
+            android:name=".MainActivity"
+            android:label="Khittara AI"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
     </application>
+
 </manifest>
