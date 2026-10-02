@@ -2,30 +2,37 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+react {
+    autolinkLibrariesWithApp()
+}
+
 android {
-    ndkVersion "26.1.10909125"
-    compileSdkVersion 34
     namespace "com.khittara.offlinemai"
+
+    ndkVersion rootProject.ext.ndkVersion
+    compileSdk rootProject.ext.compileSdkVersion
 
     defaultConfig {
         applicationId "com.khittara.offlinemai"
-        minSdkVersion 26
-        targetSdkVersion 34
+
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+
         versionCode 1
         versionName "1.0.0"
 
         externalNativeBuild {
             cmake {
                 cppFlags "-O3 -std=c++17 -frtti -fexceptions"
+
                 arguments "-DANDROID_STL=c++_shared",
                           "-DANDROID_TOOLCHAIN=clang",
                           "-DANDROID_ARM_NEON=TRUE"
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
             }
         }
 
         ndk {
-            abiFilters "arm64-v8a", "x86_64"
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
         }
     }
 
@@ -40,5 +47,15 @@ android {
         pickFirst "**/*.so"
         pickFirst "**/libc++_shared.so"
         pickFirst "**/libkhittara_llama_bridge.so"
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation("org.webkit:android-jsc:+")
     }
 }
