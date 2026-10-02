@@ -1,7 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Permissions for local GGUF storage reading on SD card and phone storage -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" tools:ignore="ScopedStorage" />
@@ -14,7 +13,6 @@
     <application
         android:name=".MainApplication"
         android:label="Khittara AI (ခေတ္တရာ)"
-        android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
         android:largeHeap="true"
         android:hardwareAccelerated="true">
