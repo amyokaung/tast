@@ -2,58 +2,108 @@ name: Build Khittara Myanmar Offline AI Android APK
 
 on:
   push:
-    branches: [ "main", "master" ]
-    tags: [ "v*" ]
+    branches:
+      - main
+      - master
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
+
     steps:
+
+      # --------------------------------
+      # Checkout
+      # --------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      # --------------------------------
+      # Java 17
+      # --------------------------------
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: "17"
 
+      # --------------------------------
+      # Node.js 20
+      # --------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
+          cache: npm
+
+      # --------------------------------
+      # Install Android NDK
+      # --------------------------------
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK 26.1.10909125
+        run: |
+          sdkmanager "ndk;26.1.10909125"
 
       - name: Setup Android NDK Environment
         run: |
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
 
+      # --------------------------------
+      # Install Node Dependencies
+      # --------------------------------
       - name: Install Node Dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          npm install --legacy-peer-deps
 
+      # --------------------------------
+      # Generate Gradle Wrapper
+      # --------------------------------
       - name: Generate Gradle Wrapper
         working-directory: android
         run: |
-          curl -sL https://services.gradle.org/distributions/gradle-8.3-bin.zip -o gradle-8.3-bin.zip
-          unzip -q gradle-8.3-bin.zip
-          ./gradle-8.3/bin/gradle wrapper --gradle-version 8.3
+          curl -L https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -o gradle-8.10.2-bin.zip
+          unzip -q gradle-8.10.2-bin.zip
+          ./gradle-8.10.2/bin/gradle wrapper --gradle-version 8.10.2
           chmod +x gradlew
 
+      # --------------------------------
+      # Build JavaScript Bundle
+      # --------------------------------
       - name: Build JS Bundle
         run: |
           mkdir -p android/app/src/main/assets
-          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/ || true
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
 
+      # --------------------------------
+      # Build Android Release APK
+      # --------------------------------
       - name: Build Android Release APK
         working-directory: android
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-        run: ./gradlew assembleRelease --stacktrace
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace
 
+      # --------------------------------
+      # Upload APK
+      # --------------------------------
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Khittara-AI-Release-APK
-          path: android/app/build/outputs/apk/release/
+          path: android/app/build/outputs/apk/release/*.apk
