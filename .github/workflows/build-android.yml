@@ -10,9 +10,12 @@ on:
 
   workflow_dispatch:
 
+
 jobs:
   build-android:
+
     runs-on: ubuntu-latest
+
 
     steps:
 
@@ -48,30 +51,83 @@ jobs:
       # 4. Setup Android SDK
       # ==========================================
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
-          packages: platform-tools
+          packages: "platform-tools"
 
 
       # ==========================================
-      # 5. Install Android NDK
+      # 5. Install Android SDK Packages
       # ==========================================
-      - name: Install NDK 26.1.10909125
+      - name: Install Android SDK Packages
         run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-35"
+          sdkmanager "build-tools;35.0.0"
           sdkmanager "ndk;26.1.10909125"
 
+          yes | sdkmanager --licenses || true
+
 
       # ==========================================
-      # 6. Setup Android NDK Environment
+      # 6. Setup Android Environment
       # ==========================================
-      - name: Setup Android NDK Environment
+      - name: Setup Android Environment
         run: |
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
+
           echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
 
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
+
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
 
       # ==========================================
-      # 7. Install Node Dependencies
+      # 7. Verify Android Environment
+      # ==========================================
+      - name: Verify Android Environment
+        run: |
+          echo "=========================================="
+          echo "JAVA VERSION"
+          echo "=========================================="
+          java -version
+
+          echo ""
+          echo "=========================================="
+          echo "NODE VERSION"
+          echo "=========================================="
+          node --version
+
+          echo ""
+          echo "=========================================="
+          echo "NPM VERSION"
+          echo "=========================================="
+          npm --version
+
+          echo ""
+          echo "=========================================="
+          echo "ANDROID SDK"
+          echo "=========================================="
+          echo "$ANDROID_SDK_ROOT"
+
+          echo ""
+          echo "=========================================="
+          echo "ANDROID NDK"
+          echo "=========================================="
+          echo "$ANDROID_NDK_HOME"
+
+          echo ""
+          echo "=========================================="
+          echo "SDKMANAGER VERSION"
+          echo "=========================================="
+          sdkmanager --version
+
+
+      # ==========================================
+      # 8. Install Node Dependencies
       # ==========================================
       - name: Install Node Dependencies
         run: |
@@ -79,23 +135,78 @@ jobs:
 
 
       # ==========================================
-      # 8. Generate Gradle Wrapper
+      # 9. Install React Native Community CLI
+      # ==========================================
+      - name: Install React Native Community CLI
+        run: |
+          npm install --save-dev --legacy-peer-deps \
+            @react-native-community/cli@15.0.1 \
+            @react-native-community/cli-platform-android@15.0.1 \
+            @react-native-community/cli-platform-ios@15.0.1
+
+
+      # ==========================================
+      # 10. Verify React Native
+      # ==========================================
+      - name: Verify React Native CLI
+        run: |
+          echo "=========================================="
+          echo "React Native Version"
+          echo "=========================================="
+
+          node -p "require('react-native/package.json').version"
+
+          echo ""
+          echo "=========================================="
+          echo "React Native CLI Version"
+          echo "=========================================="
+
+          node -p "require('@react-native-community/cli/package.json').version"
+
+          echo ""
+          echo "=========================================="
+          echo "React Native CLI Check"
+          echo "=========================================="
+
+          npx react-native --version
+
+
+      # ==========================================
+      # 11. Generate Gradle Wrapper
       # ==========================================
       - name: Generate Gradle Wrapper
         working-directory: android
         run: |
-          curl -L https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -o gradle-8.10.2-bin.zip
+          curl -L \
+            https://services.gradle.org/distributions/gradle-8.10.2-bin.zip \
+            -o gradle-8.10.2-bin.zip
+
           unzip -q gradle-8.10.2-bin.zip
-          ./gradle-8.10.2/bin/gradle wrapper --gradle-version 8.10.2
+
+          ./gradle-8.10.2/bin/gradle wrapper \
+            --gradle-version 8.10.2
+
           chmod +x gradlew
 
 
       # ==========================================
-      # 9. Build React Native JavaScript Bundle
+      # 12. Verify Gradle
+      # ==========================================
+      - name: Verify Gradle
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --version
+
+
+      # ==========================================
+      # 13. Build React Native JavaScript Bundle
       # ==========================================
       - name: Build JS Bundle
         run: |
           mkdir -p android/app/src/main/assets
+
+          mkdir -p android/app/src/main/res
 
           npx react-native bundle \
             --platform android \
@@ -106,7 +217,40 @@ jobs:
 
 
       # ==========================================
-      # 10. Build Android Release APK
+      # 14. Verify JS Bundle
+      # ==========================================
+      - name: Verify JS Bundle
+        run: |
+          echo "Checking React Native JS Bundle..."
+
+          if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
+            echo "ERROR: JS Bundle was not created!"
+            exit 1
+          fi
+
+          echo "JS Bundle successfully created."
+
+          ls -lh android/app/src/main/assets/index.android.bundle
+
+
+      # ==========================================
+      # 15. Clean Android Build
+      # ==========================================
+      - name: Clean Android Build
+        working-directory: android
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
+        run: |
+          chmod +x gradlew
+
+          ./gradlew clean \
+            --stacktrace \
+            --no-daemon
+
+
+      # ==========================================
+      # 16. Build Android Release APK
       # ==========================================
       - name: Build Android Release APK
         working-directory: android
@@ -115,14 +259,38 @@ jobs:
           ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --stacktrace
+
+          ./gradlew assembleRelease \
+            --stacktrace \
+            --no-daemon
 
 
       # ==========================================
-      # 11. Upload APK Artifact
+      # 17. Verify APK
+      # ==========================================
+      - name: Verify APK
+        run: |
+          echo "=========================================="
+          echo "APK OUTPUT"
+          echo "=========================================="
+
+          ls -lah android/app/build/outputs/apk/release/
+
+          if ! ls android/app/build/outputs/apk/release/*.apk >/dev/null 2>&1; then
+            echo "ERROR: APK file was not generated!"
+            exit 1
+          fi
+
+          echo ""
+          echo "APK BUILD SUCCESSFUL!"
+
+
+      # ==========================================
+      # 18. Upload APK Artifact
       # ==========================================
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Khittara-AI-Release-APK
           path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
