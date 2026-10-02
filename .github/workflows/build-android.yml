@@ -16,7 +16,6 @@ jobs:
 
     runs-on: ubuntu-latest
 
-
     steps:
 
       # ==========================================
@@ -57,7 +56,7 @@ jobs:
 
 
       # ==========================================
-      # 5. Install Android SDK Packages
+      # 5. Install Android SDK + NDK
       # ==========================================
       - name: Install Android SDK Packages
         run: |
@@ -74,36 +73,36 @@ jobs:
       # ==========================================
       - name: Setup Android Environment
         run: |
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
 
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
-          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
-          echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
 
-          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
 
 
       # ==========================================
-      # 7. Verify Android Environment
+      # 7. Verify Java / Node / Android
       # ==========================================
-      - name: Verify Android Environment
+      - name: Verify Build Environment
         run: |
           echo "=========================================="
-          echo "JAVA VERSION"
+          echo "JAVA"
           echo "=========================================="
           java -version
 
           echo ""
           echo "=========================================="
-          echo "NODE VERSION"
+          echo "NODE"
           echo "=========================================="
           node --version
 
           echo ""
           echo "=========================================="
-          echo "NPM VERSION"
+          echo "NPM"
           echo "=========================================="
           npm --version
 
@@ -119,12 +118,6 @@ jobs:
           echo "=========================================="
           echo "$ANDROID_NDK_HOME"
 
-          echo ""
-          echo "=========================================="
-          echo "SDKMANAGER VERSION"
-          echo "=========================================="
-          sdkmanager --version
-
 
       # ==========================================
       # 8. Install Node Dependencies
@@ -135,44 +128,64 @@ jobs:
 
 
       # ==========================================
-      # 9. Install React Native Community CLI
+      # 9. Force Install React Native Metro
       # ==========================================
-      - name: Install React Native Community CLI
+      - name: Install React Native Metro Dependencies
         run: |
-          npm install --save-dev --legacy-peer-deps \
+          npm install \
+            --save-dev \
+            --legacy-peer-deps \
+            @react-native/metro-config@0.76.6 \
             @react-native-community/cli@15.0.1 \
             @react-native-community/cli-platform-android@15.0.1 \
             @react-native-community/cli-platform-ios@15.0.1
 
 
       # ==========================================
-      # 10. Verify React Native
+      # 10. Verify React Native Packages
       # ==========================================
-      - name: Verify React Native CLI
+      - name: Verify React Native Packages
         run: |
           echo "=========================================="
-          echo "React Native Version"
+          echo "React Native"
           echo "=========================================="
 
           node -p "require('react-native/package.json').version"
 
           echo ""
           echo "=========================================="
-          echo "React Native CLI Version"
+          echo "Metro Config"
+          echo "=========================================="
+
+          node -p "require('@react-native/metro-config/package.json').version"
+
+          echo ""
+          echo "=========================================="
+          echo "Community CLI"
           echo "=========================================="
 
           node -p "require('@react-native-community/cli/package.json').version"
 
           echo ""
           echo "=========================================="
-          echo "React Native CLI Check"
+          echo "Metro Config File"
           echo "=========================================="
 
-          npx react-native --version
+          test -f metro.config.js
+
+          echo "metro.config.js FOUND"
 
 
       # ==========================================
-      # 11. Generate Gradle Wrapper
+      # 11. Test Metro Config
+      # ==========================================
+      - name: Test Metro Configuration
+        run: |
+          node -e "require('./metro.config.js'); console.log('Metro configuration loaded successfully')"
+
+
+      # ==========================================
+      # 12. Generate Gradle Wrapper
       # ==========================================
       - name: Generate Gradle Wrapper
         working-directory: android
@@ -190,17 +203,18 @@ jobs:
 
 
       # ==========================================
-      # 12. Verify Gradle
+      # 13. Verify Gradle
       # ==========================================
       - name: Verify Gradle
         working-directory: android
         run: |
           chmod +x gradlew
+
           ./gradlew --version
 
 
       # ==========================================
-      # 13. Build React Native JavaScript Bundle
+      # 14. Build React Native JS Bundle
       # ==========================================
       - name: Build JS Bundle
         run: |
@@ -213,28 +227,32 @@ jobs:
             --dev false \
             --entry-file index.js \
             --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res
+            --assets-dest android/app/src/main/res \
+            --config metro.config.js
 
 
       # ==========================================
-      # 14. Verify JS Bundle
+      # 15. Verify JS Bundle
       # ==========================================
       - name: Verify JS Bundle
         run: |
-          echo "Checking React Native JS Bundle..."
+          echo "=========================================="
+          echo "Checking JS Bundle"
+          echo "=========================================="
 
           if [ ! -f android/app/src/main/assets/index.android.bundle ]; then
-            echo "ERROR: JS Bundle was not created!"
+            echo "ERROR: JS Bundle was NOT created!"
             exit 1
           fi
 
-          echo "JS Bundle successfully created."
-
           ls -lh android/app/src/main/assets/index.android.bundle
+
+          echo ""
+          echo "JS BUNDLE CREATED SUCCESSFULLY!"
 
 
       # ==========================================
-      # 15. Clean Android Build
+      # 16. Clean Android
       # ==========================================
       - name: Clean Android Build
         working-directory: android
@@ -250,7 +268,7 @@ jobs:
 
 
       # ==========================================
-      # 16. Build Android Release APK
+      # 17. Build Release APK
       # ==========================================
       - name: Build Android Release APK
         working-directory: android
@@ -266,7 +284,7 @@ jobs:
 
 
       # ==========================================
-      # 17. Verify APK
+      # 18. Verify APK
       # ==========================================
       - name: Verify APK
         run: |
@@ -277,16 +295,18 @@ jobs:
           ls -lah android/app/build/outputs/apk/release/
 
           if ! ls android/app/build/outputs/apk/release/*.apk >/dev/null 2>&1; then
-            echo "ERROR: APK file was not generated!"
+            echo "ERROR: APK was NOT generated!"
             exit 1
           fi
 
           echo ""
+          echo "=========================================="
           echo "APK BUILD SUCCESSFUL!"
+          echo "=========================================="
 
 
       # ==========================================
-      # 18. Upload APK Artifact
+      # 19. Upload APK Artifact
       # ==========================================
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
